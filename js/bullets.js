@@ -184,6 +184,9 @@ class BulletManager {
             gameManager.showFeedback(`CORRECT! ${enemy.cityName} is the capital`, [100, 255, 100]);
           }
           
+          // Play correct answer sound
+          window.soundManager && window.soundManager.playCorrectSound();
+          
           // Clear all enemies - use while loop for more reliable clearing
           console.log(`Clearing all enemies (${enemies.length})`);
           while(enemies.length > 0) {
@@ -225,6 +228,9 @@ class BulletManager {
           
           // Apply score penalty
           result.points = CONFIG.WAVES.POINTS.WRONG_ANSWER;
+          
+          // Play wrong answer sound
+          window.soundManager && window.soundManager.playWrongSound();
         }
         
         // We found a collision, so we can break out of the loop

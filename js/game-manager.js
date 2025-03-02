@@ -100,6 +100,8 @@ class GameManager {
     // Create visual effects for game ending
     this.particleManager.addScreenShake(CONFIG.EFFECTS.SHAKE.GAME_OVER);
     this.particleManager.setGlitchIntensity(CONFIG.EFFECTS.GLITCH.EXPLOSION);
+    // Play game over sound
+    window.soundManager && window.soundManager.playGameOverSound();
   }
   
   /**
@@ -603,8 +605,9 @@ class GameManager {
       // Muzzle flash effect - now handled in player's own draw method
       this.particleManager.createExplosion(this.player.x, this.player.y - 20, 3, 30);
       
-      // Update last shot time on the player
+      // Update last shot time on the player and play shoot sound
       this.player.shoot();
+      window.soundManager && window.soundManager.playShootSound();
       
       // Reduce score for shooting and show feedback if cost is non-zero
       if (CONFIG.BULLETS.COST > 0) {
