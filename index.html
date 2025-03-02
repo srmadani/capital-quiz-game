@@ -1,15 +1,292 @@
-   /game
-       ├── index.html
-       ├── sketch.js
-       ├── js/
-       │   ├── game-loader.js
-       │   ├── game-manager.js
-       │   ├── player.js
-       │   ├── enemy.js
-       │   ├── bullets.js
-       │   ├── particles.js
-       │   ├── config.js
-       │   ├── caps-data.js
-       ├── css/
-       ├── images/
-       └── README.md
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>CAPITAL QUIZ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Space Mono', monospace;
+            touch-action: none; /* Prevent browser handling of touch gestures */
+        }
+        canvas {
+            display: block;
+            cursor: none; /* Hide the default cursor */
+        }
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+        #loading h1 {
+            font-size: min(8vw, 3rem);
+            letter-spacing: 0.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        #loading p {
+            font-size: min(4vw, 1rem);
+            text-align: center;
+        }
+        #loading .error {
+            color: #ff5555;
+            margin-top: 20px;
+            text-align: center;
+            padding: 0 20px;
+            font-size: min(3.5vw, 0.9rem);
+        }
+        #loading .instructions {
+            margin-top: 30px;
+            font-size: min(3vw, 0.8rem);
+            text-align: center;
+            padding: 0 20px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        #loading span {
+            animation: blink 1s infinite;
+        }
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            #loading .instructions {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        /* Prevent text selection */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        /* Explicitly prevent all default touch behaviors */
+        html, body, canvas {
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+    </style>
+    <script>
+        // CRITICAL FIX: Define safetyFlag to track state across events and prevent double processing
+        window.gameSafetyFlags = {
+            shootingInProgress: false,
+            lastShootTime: 0,
+            resetInProgress: false,
+            lastResetTime: 0,
+            
+            // Check if it's safe to shoot
+            canShoot: function() {
+                const currentTime = Date.now();
+                if (this.shootingInProgress || (currentTime - this.lastShootTime < 350)) {
+                    console.log("Shooting prevented by safety system");
+                    return false;
+                }
+                this.shootingInProgress = true;
+                this.lastShootTime = currentTime;
+                
+                // Auto-reset flag after timeout
+                setTimeout(() => { 
+                    this.shootingInProgress = false;
+                }, 500);
+                
+                return true;
+            },
+            
+            // Check if it's safe to reset
+            canReset: function() {
+                const currentTime = Date.now();
+                if (this.resetInProgress || (currentTime - this.lastResetTime < 1000)) {
+                    console.log("Reset prevented by safety system");
+                    return false;
+                }
+                this.resetInProgress = true;
+                this.lastResetTime = currentTime;
+                
+                // Auto-reset flag after timeout
+                setTimeout(() => {
+                    this.resetInProgress = false;
+                }, 1000);
+                
+                return true;
+            }
+        };
+        
+        // Block browser's default handling of touch events at document level
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('touchend', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</head>
+<body>
+    <div id="loading">
+        <h1>CAPITAL QUIZ</h1>
+        <p>LOADING GEOGRAPHY DATABASE <span>_</span></p>
+        <div class="error" id="loadingError"></div>
+        <div class="instructions">
+            <span data-device="desktop">Press 'D' anytime to see debug information</span>
+            <span data-device="mobile" style="display:none">Double tap anytime to see debug information</span>
+            <span>If loading fails, check browser console (F12)</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <!-- Make sure gameSafetyFlags is defined first -->
+    <script>
+        // CRITICAL FIX: Define safetyFlag to track state across events and prevent double processing
+        window.gameSafetyFlags = {
+            shootingInProgress: false,
+            lastShootTime: 0,
+            resetInProgress: false,
+            lastResetTime: 0,
+            
+            // Check if it's safe to shoot
+            canShoot: function() {
+                const currentTime = Date.now();
+                if (this.shootingInProgress || (currentTime - this.lastShootTime < 350)) {
+                    console.log("Shooting prevented by safety system");
+                    return false;
+                }
+                this.shootingInProgress = true;
+                this.lastShootTime = currentTime;
+                
+                // Auto-reset flag after timeout
+                setTimeout(() => { 
+                    this.shootingInProgress = false;
+                }, 500);
+                
+                return true;
+            },
+            
+            // Check if it's safe to reset
+            canReset: function() {
+                const currentTime = Date.now();
+                if (this.resetInProgress || (currentTime - this.lastResetTime < 1000)) {
+                    console.log("Reset prevented by safety system");
+                    return false;
+                }
+                this.resetInProgress = true;
+                this.lastResetTime = currentTime;
+                
+                // Auto-reset flag after timeout
+                setTimeout(() => {
+                    this.resetInProgress = false;
+                }, 1000);
+                
+                return true;
+            }
+        };
+    </script>
+    <!-- Add the game loader first -->
+    <script src="js/game-loader.js"></script>
+    <!-- Add caps-data.js to make country/capital data available without CSV loading -->
+    <script src="js/caps-data.js"></script>
+    <!-- Then load modules in dependency order -->
+    <script src="js/config.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/bullets.js"></script>
+    <!-- Important: Make sure GameManager loads before sketch.js -->
+    <script src="js/game-manager.js"></script>
+    <!-- Load main sketch last -->
+    <script src="sketch.js"></script>
+    <script>
+        // Check if data is loaded
+        if (typeof CAPITALS_DATA !== 'undefined') {
+            console.log("CAPITALS_DATA is available in the global scope with " + CAPITALS_DATA.length + " entries");
+        } else {
+            console.error("CAPITALS_DATA is NOT available in the global scope");
+        }
+        
+        // Enhanced loading screen with error handling
+        let loadTimeout = setTimeout(function() {
+            document.getElementById('loadingError').innerHTML = 
+                "Loading is taking longer than expected.<br>Check console (F12) for errors.";
+        }, 5000);
+        
+        // Detect mobile devices and update UI instructions accordingly
+        function detectMobileDevice() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+            document.querySelectorAll('[data-device="desktop"]').forEach(el => {
+                el.style.display = isMobile ? 'none' : 'block';
+            });
+            document.querySelectorAll('[data-device="mobile"]').forEach(el => {
+                el.style.display = isMobile ? 'block' : 'none';
+            });
+            return isMobile;
+        }
+        
+        // Call detection on page load
+        detectMobileDevice();
+        
+        // Adjust for screen orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(detectMobileDevice, 300); // Short delay to allow orientation to complete
+        });
+        
+        window.addEventListener('load', function() {
+            clearTimeout(loadTimeout);
+            
+            // Check if initialization is working
+            setTimeout(function() {
+                if (!window.gameManagerInitialized) {
+                    document.getElementById('loadingError').innerHTML = 
+                        "Failed to initialize game.<br>Try refreshing the page or check console (F12) for errors.";
+                } else {
+                    const loader = document.getElementById('loading');
+                    loader.style.opacity = 0;
+                    setTimeout(function() {
+                        loader.style.display = 'none';
+                    }, 500);
+                }
+            }, 2000);
+            
+            console.log("Page loaded. If you're having issues, press 'D' to toggle debug mode or ESC to quit game.");
+        });
+        
+        // Add extra safeguard against touch events
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('touchend', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
